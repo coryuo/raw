@@ -1,6 +1,5 @@
--- NexusLib – fixed for Delta mobile/PC
--- Draggable on touch/mouse, blur auto-cleans, no CoreGui issues
--- loadstring(game:HttpGet("https://raw.githubusercontent.com/coryuo/raw/refs/heads/main/roblox_fixed.luau"))():Window({Name="Test"}):Show()
+-- NexusLib – ready-to-use version (drag, blur cleanup, Delta-safe)
+-- loadstring(game:HttpGet("https://raw.githubusercontent.com/coryuo/raw/refs/heads/main/roblox.luau"))():Window({Name="Test"}):Show()
 
 local NexusLib = {}
 local ts = game:GetService("TweenService")
@@ -21,9 +20,9 @@ gui.IgnoreGuiInset = true
 gui.ResetOnSpawn = false
 gui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 
--- Safe blur (Camera, not Lighting) – Delta friendly
+-- Blur lives in CurrentCamera so Delta can kill it
 local blur
-if not game:GetService("RunService"):IsStudio() then
+if workspace.CurrentCamera then
     blur = Instance.new("BlurEffect")
     blur.Size = 0
     blur.Parent = workspace.CurrentCamera
@@ -64,7 +63,6 @@ local function makeGlass(name,parent,size,pos)
     stroke.Thickness = 2
     stroke.Transparency = .7
     stroke.Parent = f
-
     return f
 end
 
@@ -129,7 +127,7 @@ function NexusLib:Window(cfg)
     pageList.SortOrder = Enum.SortOrder.LayoutOrder
     pageList.Parent = pages
 
-    -- ====== DRAG LOGIC ======
+    -- Drag logic
     local dragging, dragInput, startPos, startGuiPos
     main.InputBegan:Connect(function(inp)
         if inp.UserInputType == Enum.UserInputType.Touch or inp.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -148,10 +146,8 @@ function NexusLib:Window(cfg)
                                       startGuiPos.Y.Scale, startGuiPos.Y.Offset + delta.Y)
         end
     end)
-    -- ====== END DRAG ======
 
     local api = {}
-
     function api:Tab(name)
         local btn = Instance.new("TextButton")
         btn.Text = name
@@ -192,7 +188,6 @@ function NexusLib:Window(cfg)
         end)
 
         local sec = {}
-
         function sec:Section(name)
             local lbl = Instance.new("TextLabel")
             lbl.Text = name
@@ -204,7 +199,6 @@ function NexusLib:Window(cfg)
             lbl.Parent = page
 
             local grp = {}
-
             function grp:Button(text,callback)
                 local b = Instance.new("TextButton")
                 b.Text = text
@@ -278,7 +272,6 @@ function NexusLib:Window(cfg)
         wait(.35)
         main.Visible = false
     end
-
     return api
 end
 
