@@ -1,53 +1,18 @@
--- NexusLib – drop-in replacement for Rayfield/Orion
--- Paste into any Lua executor, run once, then use NexusLib:Window() etc.
--- 100 % smooth 60 FPS tweens, dark glassmorphism skin, responsive scaling.
+-- NexusLib – fixed for Delta mobile/PC
+-- Draggable on touch/mouse, blur auto-cleans, no CoreGui issues
+-- loadstring(game:HttpGet("https://raw.githubusercontent.com/coryuo/raw/refs/heads/main/roblox_fixed.luau"))():Window({Name="Test"}):Show()
 
 local NexusLib = {}
 local ts = game:GetService("TweenService")
-local tween = function(obj,info,props) ts:Create(obj,TweenInfo.new(info.t or .35,Enum.EasingStyle[info.s or "Quint"],Enum.EasingDirection.Out),props):Play() end
+local UIS = game:GetService("UserInputService")
+local tween = function(obj,info,props)
+    ts:Create(obj,TweenInfo.new(info.t or .35,Enum.EasingStyle[info.s or "Quint"],Enum.EasingDirection.Out),props):Play()
+end
 local colors = {
     bg = Color3.fromRGB(20,20,20),
     glass = Color3.fromRGB(255,255,255),
     accent = Color3.fromRGB(0,150,255)
 }
-
--- ====== TOUCH DRAG ======
-local dragging, dragInput, dragStart, startPos
-
-local function update(input)
-    local delta = input.Position - dragStart
-    main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
-                              startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-end
-
-top.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or
-       input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = main.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
-    end
-end)
-
-top.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or
-       input.UserInputType == Enum.UserInputType.Touch then
-        dragInput = input
-    end
-end)
-
-game:GetService("UserInputService").InputChanged:Connect(function(input)
-    if dragging and input == dragInput then
-        update(input)
-    end
-end)
--- ====== END DRAG ======
-
 
 -- Core container
 local gui = Instance.new("ScreenGui")
@@ -56,9 +21,13 @@ gui.IgnoreGuiInset = true
 gui.ResetOnSpawn = false
 gui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 
-local blur = Instance.new("BlurEffect")
-blur.Size = 0
-blur.Parent = game:GetService("Lighting")
+-- Safe blur (Camera, not Lighting) – Delta friendly
+local blur
+if not game:GetService("RunService"):IsStudio() then
+    blur = Instance.new("BlurEffect")
+    blur.Size = 0
+    blur.Parent = workspace.CurrentCamera
+end
 
 -- Pre-built glass panel
 local function makeGlass(name,parent,size,pos)
@@ -132,12 +101,9 @@ function NexusLib:Window(cfg)
     close.Parent = top
     close.MouseButton1Click:Connect(function()
         tween(main,{t=.3,s="Back"},{BackgroundTransparency=1,Size=UDim2.new(0,0,0,0)})
-        tween(blur,{t=.4},{Size=0})
+        if blur then tween(blur,{t=.4},{Size=0}) end
         wait(.35)
         main.Visible = false
-
-    game:GetService("Lighting"):ClearAllChildren()  -- brute-force kill the Blur
-
     end)
 
     local tabs = Instance.new("Frame")
@@ -162,6 +128,27 @@ function NexusLib:Window(cfg)
     pageList.FillDirection = Enum.FillDirection.Vertical
     pageList.SortOrder = Enum.SortOrder.LayoutOrder
     pageList.Parent = pages
+
+    -- ====== DRAG LOGIC ======
+    local dragging, dragInput, startPos, startGuiPos
+    main.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.Touch or inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            startPos = inp.Position
+            startGuiPos = main.Position
+            inp.Changed:Connect(function()
+                if inp.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+    UIS.InputChanged:Connect(function(inp)
+        if dragging and (inp == dragInput or inp.UserInputType == Enum.UserInputType.Touch) then
+            local delta = inp.Position - startPos
+            main.Position = UDim2.new(startGuiPos.X.Scale, startGuiPos.X.Offset + delta.X,
+                                      startGuiPos.Y.Scale, startGuiPos.Y.Offset + delta.Y)
+        end
+    end)
+    -- ====== END DRAG ======
 
     local api = {}
 
@@ -272,10 +259,8 @@ function NexusLib:Window(cfg)
                     callback(val)
                 end)
             end
-
             return grp
         end
-
         return sec
     end
 
@@ -284,27 +269,17 @@ function NexusLib:Window(cfg)
         main.Size = UDim2.new(0,0,0,0)
         main.BackgroundTransparency = 1
         tween(main,{t=.45,s="Back"},{Size=UDim2.new(0,500,0,350),BackgroundTransparency=.25})
-        tween(blur,{t=.4},{Size=12})
+        if blur then tween(blur,{t=.4},{Size=12}) end
     end
 
     function api:Hide()
         tween(main,{t=.3,s="Back"},{BackgroundTransparency=1,Size=UDim2.new(0,0,0,0)})
-        tween(blur,{t=.4},{Size=0})
+        if blur then tween(blur,{t=.4},{Size=0}) end
         wait(.35)
         main.Visible = false
     end
 
     return api
 end
-
--- Example usage (run once):
---[[
-local win = NexusLib:Window({Name="🔥 NexusLib Demo"})
-local tab1 = win:Tab("Main")
-local sec1 = tab1:Section("Actions")
-sec1:Button("Print Hello",function() print("hello from NexusLib") end)
-sec1:Toggle("ESP",false,function(v) print("ESP",v) end)
-win:Show()
---]]
 
 return NexusLib
