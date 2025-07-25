@@ -1,4 +1,4 @@
--- NexusLib – ready-to-use version (drag, blur cleanup, Delta-safe)
+-- NexusLib – 100 % blur-free for Delta mobile
 -- loadstring(game:HttpGet("https://raw.githubusercontent.com/coryuo/raw/refs/heads/main/roblox.luau"))():Window({Name="Test"}):Show()
 
 local NexusLib = {}
@@ -20,13 +20,8 @@ gui.IgnoreGuiInset = true
 gui.ResetOnSpawn = false
 gui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 
--- Blur lives in CurrentCamera so Delta can kill it
-local blur
-if workspace.CurrentCamera then
-    blur = Instance.new("BlurEffect")
-    blur.Size = 0
-    blur.Parent = workspace.CurrentCamera
-end
+-- NO BLUR
+local blur = nil
 
 -- Pre-built glass panel
 local function makeGlass(name,parent,size,pos)
@@ -99,7 +94,6 @@ function NexusLib:Window(cfg)
     close.Parent = top
     close.MouseButton1Click:Connect(function()
         tween(main,{t=.3,s="Back"},{BackgroundTransparency=1,Size=UDim2.new(0,0,0,0)})
-        if blur then tween(blur,{t=.4},{Size=0}) end
         wait(.35)
         main.Visible = false
     end)
@@ -263,12 +257,10 @@ function NexusLib:Window(cfg)
         main.Size = UDim2.new(0,0,0,0)
         main.BackgroundTransparency = 1
         tween(main,{t=.45,s="Back"},{Size=UDim2.new(0,500,0,350),BackgroundTransparency=.25})
-        if blur then tween(blur,{t=.4},{Size=12}) end
     end
 
     function api:Hide()
         tween(main,{t=.3,s="Back"},{BackgroundTransparency=1,Size=UDim2.new(0,0,0,0)})
-        if blur then tween(blur,{t=.4},{Size=0}) end
         wait(.35)
         main.Visible = false
     end
