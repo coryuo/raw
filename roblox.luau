@@ -11,6 +11,44 @@ local colors = {
     accent = Color3.fromRGB(0,150,255)
 }
 
+-- ====== TOUCH DRAG ======
+local dragging, dragInput, dragStart, startPos
+
+local function update(input)
+    local delta = input.Position - dragStart
+    main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+                              startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+top.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or
+       input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = main.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+top.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or
+       input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if dragging and input == dragInput then
+        update(input)
+    end
+end)
+-- ====== END DRAG ======
+
+
 -- Core container
 local gui = Instance.new("ScreenGui")
 gui.Name = "NexusLib"
@@ -97,6 +135,9 @@ function NexusLib:Window(cfg)
         tween(blur,{t=.4},{Size=0})
         wait(.35)
         main.Visible = false
+
+    game:GetService("Lighting"):ClearAllChildren()  -- brute-force kill the Blur
+
     end)
 
     local tabs = Instance.new("Frame")
